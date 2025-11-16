@@ -1,20 +1,7 @@
-# Discord Bot 本体
 discord.py==2.3.1
-
-# PyTorch CPU版
-torch==2.9.1+cpu
-
-# HuggingFace Transformers
+# 軽量実装なので torch は不要（Koyeb Free で確実に動く）
 transformers==4.41.0
 tokenizers==0.19.1
 safetensors==0.6.2
-
-# 非同期HTTP
 aiohttp<4,>=3.7.4
-
-# 依存関係（必須）
 numpy>=1.17
-tqdm>=4.27
-requests>=2.32.0
-pyyaml>=6.0
-packaging>=20.0
