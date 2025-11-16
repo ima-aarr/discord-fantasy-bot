@@ -1,19 +1,26 @@
 from discord.ext import commands
-import json
+import json, os
+
+DATA_FILE = "data/players.json"
 
 @commands.command()
 async def party(ctx, target: commands.MemberConverter):
-    with open("data/players.json", "r") as f:
+    with open(DATA_FILE, "r") as f:
         players = json.load(f)
 
-    user_id = str(ctx.author.id)
-    target_id = str(target.id)
-    if user_id not in players or target_id not in players:
-        await ctx.send("両方のプレイヤーがキャラクターを作成している必要があります。")
+    a = str(ctx.author.id)
+    b = str(target.id)
+    if a not in players or b not in players:
+        await ctx.send("両方がキャラ作成してへんとあかんで。")
         return
 
-    players[user_id].setdefault("party", []).append(target_id)
-    with open("data/players.json", "w") as f:
-        json.dump(players, f, indent=2)
+    players[a].setdefault("party", [])
+    if b in players[a]["party"]:
+        await ctx.send(f"{target.name} は既にパーティーに入ってるで。")
+        return
 
-    await ctx.send(f"{ctx.author.name} と {target.name} がパーティーを組みました。")
+    players[a]["party"].append(b)
+    with open(DATA_FILE, "w") as f:
+        json.dump(players, f, indent=2, ensure_ascii=False)
+
+    await ctx.send(f"{ctx.author.name} と {target.name} がパーティーを組んだで。")
