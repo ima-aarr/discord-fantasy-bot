@@ -1,3 +1,4 @@
+import os
 import discord
 from discord.ext import commands
 
@@ -15,7 +16,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='/', intents=intents)
 
-# コマンド登録
+# register commands
 bot.add_command(create_character)
 bot.add_command(move)
 bot.add_command(explore)
@@ -26,5 +27,14 @@ bot.add_command(duel)
 bot.add_command(talk)
 bot.add_command(trade)
 
-TOKEN = "DISCORD_BOT_TOKEN"
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user} (id: {bot.user.id})")
+    print("------")
+
+TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
+if not TOKEN:
+    print("Warning: DISCORD_BOT_TOKEN not set. Exiting.")
+    exit(1)
+
 bot.run(TOKEN)
