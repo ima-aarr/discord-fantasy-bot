@@ -26,5 +26,5 @@ bot.add_command(duel)
 bot.add_command(talk)
 bot.add_command(trade)
 
-TOKEN = "YOUR_DISCORD_BOT_TOKEN"
+TOKEN = "DISCORD_BOT_TOKEN"
 bot.run(TOKEN)
