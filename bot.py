@@ -39,7 +39,6 @@ if not TOKEN:
     print("Warning: DISCORD_BOT_TOKEN not set. Exiting.")
     exit(1)
 
-# Web サーバーをバックグラウンドで開始
 def run_web():
     server_address = ('0.0.0.0', 8000)
     httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
@@ -47,5 +46,4 @@ def run_web():
     httpd.serve_forever()
 
 threading.Thread(target=run_web, daemon=True).start()
-
 bot.run(TOKEN)
