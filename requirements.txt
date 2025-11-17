@@ -1,5 +1,4 @@
 discord.py==2.3.1
-# 軽量実装なので torch は不要（Koyeb Free で確実に動く）
 transformers==4.41.0
 tokenizers==0.19.1
 safetensors==0.6.2
