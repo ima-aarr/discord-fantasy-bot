@@ -4,12 +4,10 @@ from utils.json_handler import load_db, save_db
 @commands.command()
 async def create_character(ctx, name: str):
     db = load_db()
-    # 既にキャラクターがある場合
     for c in db["characters"]:
         if c["user_id"] == str(ctx.author.id):
             await ctx.send("既にキャラクターが存在します。")
             return
-    # 新規キャラクター作成
     character = {
         "user_id": str(ctx.author.id),
         "name": name,
