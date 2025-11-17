@@ -38,3 +38,13 @@ if not TOKEN:
     exit(1)
 
 bot.run(TOKEN)
+import threading
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+
+def run_web():
+    server_address = ('0.0.0.0', 8000)
+    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+    httpd.serve_forever()
+
+# Web サーバーをバックグラウンドで開始
+threading.Thread(target=run_web, daemon=True).start()
