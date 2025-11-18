@@ -1,21 +1,25 @@
 from discord.ext import commands
-from utils.json_handler import load_db, save_db
 from utils.llm import generate_text
+import json
 
-@commands.command(name="quest")
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
 async def quest(ctx):
-    db = load_db()
-    user_id = str(ctx.author.id)
-
-    char = next((c for c in db["characters"] if c["user_id"] == user_id), None)
-    if not char:
-        await ctx.send("キャラ作ってからクエスト受けてな。")
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    if not user:
+        await ctx.send("まず /create_character でキャラクターを作成してください。")
         return
-
-    prompt = f"{char['name']} が受けたクエスト内容と結果をRPG風に140文字以内で返せ。"
-    text = generate_text(prompt)
-
-    char["status"]["exp"] += 25
-    save_db(db)
-
-    await ctx.send(f"📝 クエスト：\n```\n{text}\n```\n+25 EXP")
+    prompt = f"{user['character_name']} が新しいクエストに挑戦しました。冒険の詳細を文章で生成してください。"
+    result = generate_text(prompt)
+    user["quests"].append(result)
+    user["actions_taken"].append("quest")
+    save_data(data)
+    await ctx.send(result)
