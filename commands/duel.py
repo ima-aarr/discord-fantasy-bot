@@ -1,24 +1,29 @@
 from discord.ext import commands
-from utils.json_handler import load_db, save_db
 from utils.llm import generate_text
+import json
+import random
 
-@commands.command(name="duel")
-async def duel(ctx, member: str = None):
-    if not member:
-        await ctx.send("対戦相手の名前を `/duel 名前` で指定してな。")
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
+async def duel(ctx, target: commands.MemberConverter):
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    opponent = data["users"].get(str(target.id))
+    if not user or not opponent:
+        await ctx.send("両方のプレイヤーがキャラクターを作成する必要があります。")
         return
-
-    db = load_db()
-    user_id = str(ctx.author.id)
-
-    char1 = next((c for c in db["characters"] if c["user_id"] == user_id), None)
-    char2 = next((c for c in db["characters"] if c["name"] == member), None)
-
-    if not char1 or not char2:
-        await ctx.send("その対戦相手はおらへん。")
-        return
-
-    prompt = f"{char1['name']} と {char2['name']} が決闘した戦闘ログを150文字以内で返せ。勝者も明記しろ。"
+    winner = random.choice([user, opponent])
+    loser = opponent if winner == user else user
+    prompt = f"{user['character_name']} と {opponent['character_name']} が決闘しました。勝者は {winner['character_name']} です。詳細文章を生成してください。"
     result = generate_text(prompt)
-
-    await ctx.send(f"⚔️ 決闘結果：\n```\n{result}\n```")
+    winner["actions_taken"].append("won duel")
+    loser["actions_taken"].append("lost duel")
+    save_data(data)
+    await ctx.send(result)
