@@ -1,8 +1,8 @@
 import os
-import discord
-from discord.ext import commands
 import threading
 from http.server import SimpleHTTPRequestHandler, HTTPServer
+import discord
+from discord.ext import commands
 
 from commands.create_character import create_character
 from commands.move import move
@@ -13,8 +13,6 @@ from commands.party import party
 from commands.duel import duel
 from commands.talk import talk
 from commands.trade import trade
-from commands.develop import develop
-from commands.event import event
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -29,17 +27,11 @@ bot.add_command(party)
 bot.add_command(duel)
 bot.add_command(talk)
 bot.add_command(trade)
-bot.add_command(develop)
-bot.add_command(event)
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (id: {bot.user.id})")
     print("------")
-
-TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
-if not TOKEN:
-    exit(1)
 
 def run_web():
     server_address = ('0.0.0.0', 8000)
@@ -47,5 +39,10 @@ def run_web():
     httpd.serve_forever()
 
 threading.Thread(target=run_web, daemon=True).start()
+
+TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
+if not TOKEN:
+    print("DISCORD_BOT_TOKEN not set")
+    exit(1)
 
 bot.run(TOKEN)
