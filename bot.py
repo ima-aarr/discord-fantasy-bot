@@ -14,6 +14,7 @@ from commands.duel import duel
 from commands.talk import talk
 from commands.trade import trade
 from commands.develop import develop
+from commands.event import event
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -29,10 +30,11 @@ bot.add_command(duel)
 bot.add_command(talk)
 bot.add_command(trade)
 bot.add_command(develop)
+bot.add_command(event)
 
 @bot.event
 async def on_ready():
-    print(f"ログインしました: {bot.user} (ID: {bot.user.id})")
+    print(f"Logged in as {bot.user} (id: {bot.user.id})")
     print("------")
 
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
