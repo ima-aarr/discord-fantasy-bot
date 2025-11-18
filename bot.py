@@ -1,8 +1,9 @@
 import os
-import threading
-from http.server import SimpleHTTPRequestHandler, HTTPServer
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
+import asyncio
+from utils.storage import load_data, save_data
+from utils.llm import generate_text
 
 from commands.create_character import create_character
 from commands.move import move
@@ -32,23 +33,31 @@ bot.add_command(trade)
 async def on_ready():
     print(f"Logged in as {bot.user} (id: {bot.user.id})")
     print("------")
+    if not random_event_loop.is_running():
+        random_event_loop.start()
+
+@tasks.loop(hours=24)
+async def random_event_loop():
+    data = await load_data()
+    for user_id, user_data in data.items():
+        event_text = generate_text(f"国内ランダムイベントを生成してください: {user_data['country_name']}")
+        user_data['events'].append(event_text)
+    await save_data(data)
+    print("24時間ランダムイベントを発生させました。")
+
+import threading
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 
 def run_web():
-    class Handler(SimpleHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.send_header('Content-type','text/plain')
-            self.end_headers()
-            self.wfile.write(b'OK')
     server_address = ('0.0.0.0', 8000)
-    httpd = HTTPServer(server_address, Handler)
+    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
     httpd.serve_forever()
 
 threading.Thread(target=run_web, daemon=True).start()
 
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 if not TOKEN:
-    print("DISCORD_BOT_TOKEN is not set. Exiting.")
+    print("DISCORD_BOT_TOKENが設定されていません。終了します。")
     exit(1)
 
 bot.run(TOKEN)
