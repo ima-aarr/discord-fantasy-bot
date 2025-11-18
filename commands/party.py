@@ -1,17 +1,25 @@
 from discord.ext import commands
-from utils.json_handler import load_db
+import json
 
-@commands.command(name="party")
-async def party(ctx):
-    db = load_db()
-    chars = db["characters"]
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    if not chars:
-        await ctx.send("まだ誰もキャラ作ってへん。")
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
+async def party(ctx, member: commands.MemberConverter):
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    target = data["users"].get(str(member.id))
+    if not user or not target:
+        await ctx.send("両方のプレイヤーがキャラクターを作成する必要があります。")
         return
-
-    msg = "🧙 パーティ一覧：\n"
-    for c in chars:
-        msg += f"- {c['name']} (Lv.{c['status']['level']} / 場所: {c['location']})\n"
-
-    await ctx.send(msg)
+    user.setdefault("alliances", []).append(str(member.id))
+    target.setdefault("alliances", []).append(str(ctx.author.id))
+    user["actions_taken"].append(f"party with {member.id}")
+    target["actions_taken"].append(f"party with {ctx.author.id}")
+    save_data(data)
+    await ctx.send(f"{user['character_name']} と {target['character_name']} がパーティを組みました。")
