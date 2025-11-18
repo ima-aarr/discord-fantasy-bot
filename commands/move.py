@@ -1,21 +1,22 @@
 from discord.ext import commands
-from utils.json_handler import load_db, save_db
+import json
 
-@commands.command(name="move")
-async def move(ctx, *, place: str = None):
-    if not place:
-        await ctx.send("どこ行く？ `/move 森` みたいにしてな。")
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
+async def move(ctx, x: int, y: int):
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    if not user:
+        await ctx.send("まず /create_character でキャラクターを作成してください。")
         return
-
-    db = load_db()
-    user_id = str(ctx.author.id)
-
-    char = next((c for c in db["characters"] if c["user_id"] == user_id), None)
-    if not char:
-        await ctx.send("キャラが存在せんで。`/create`してな。")
-        return
-
-    char["location"] = place
-    save_db(db)
-
-    await ctx.send(f"📍 {char['name']} は **{place}** へ向かった！")
+    user["custom_flags"]["position"] = {"x": x, "y": y}
+    user["actions_taken"].append(f"move to ({x},{y})")
+    save_data(data)
+    await ctx.send(f"{user['character_name']} は ({x},{y}) に移動しました。")
