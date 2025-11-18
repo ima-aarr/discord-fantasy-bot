@@ -1,22 +1,24 @@
 from discord.ext import commands
-from utils.json_handler import load_db
 from utils.llm import generate_text
+import json
 
-@commands.command(name="talk")
-async def talk(ctx, *, text: str = None):
-    if not text:
-        await ctx.send("何を話す？ `/talk おはよう`")
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
+async def talk(ctx, target: commands.MemberConverter, *, message: str):
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    if not user:
+        await ctx.send("まず /create_character でキャラクターを作成してください。")
         return
-
-    db = load_db()
-    user_id = str(ctx.author.id)
-    char = next((c for c in db["characters"] if c["user_id"] == user_id), None)
-
-    if not char:
-        await ctx.send("キャラ作ってから話しかけてな。")
-        return
-
-    prompt = f"{char['name']} がNPCと会話する。ユーザーの発言:「{text}」。その返答を100文字以内で。"
-    reply = generate_text(prompt)
-
-    await ctx.send(f"💬 NPC: {reply}")
+    prompt = f"{user['character_name']} が {target.name} に対してこう言いました: {message}。ゲーム内会話文章を生成してください。"
+    result = generate_text(prompt)
+    user["messages"].append({"to": str(target.id), "message": message})
+    save_data(data)
+    await ctx.send(result)
