@@ -11,14 +11,20 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 @commands.command()
-async def talk(ctx, target: commands.MemberConverter, *, message: str):
+async def talk(ctx, target: commands.MemberConverter, *, message):
     data = load_data()
-    user = data["users"].get(str(ctx.author.id))
-    if not user:
-        await ctx.send("まず /create_character でキャラクターを作成してください。")
+    user_id = str(ctx.author.id)
+    target_id = str(target.id)
+
+    if user_id not in data["users"] or target_id not in data["users"]:
+        await ctx.send("両方のユーザーが登録されている必要があります。")
         return
-    prompt = f"{user['character_name']} が {target.name} に対してこう言いました: {message}。ゲーム内会話文章を生成してください。"
-    result = generate_text(prompt)
-    user["messages"].append({"to": str(target.id), "message": message})
+
+    prompt = f"{data['users'][user_id]['country_name']} の指導者が {data['users'][target_id]['country_name']} の指導者に次の内容でメッセージを送ります：{message}\nこの外交文をゲーム世界観で文章化してください。"
+    generated = generate_text(prompt)
+
+    data["users"][user_id].setdefault("messages", []).append({"to": target_id, "original": message, "generated": generated})
+    data["users"][target_id].setdefault("messages", []).append({"from": user_id, "received": generated})
     save_data(data)
-    await ctx.send(result)
+
+    await ctx.send(f"外交メッセージ送信完了:\n{generated}")
