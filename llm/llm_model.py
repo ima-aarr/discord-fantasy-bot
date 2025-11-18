@@ -1,9 +1,10 @@
-import os
-import requests
+import random
 
 def generate_text(prompt: str) -> str:
-    url = "https://api.deepseek.com/v1/generate"
-    headers = {"Authorization": f"Bearer {os.environ['DEEPSEEK_API_KEY']}"}
-    data = {"prompt": prompt, "max_tokens": 200}
-    res = requests.post(url, headers=headers, json=data)
-    return res.json().get("text", "...")
+    templates = [
+        f"{prompt} 冒険は成功し、新しい発見がありました！",
+        f"{prompt} 想定外の困難に直面しましたが、勇気で乗り越えました。",
+        f"{prompt} 何も起こらず平穏な探索でした。",
+        f"{prompt} 新しいキャラクターや敵と遭遇しました！"
+    ]
+    return random.choice(templates)
