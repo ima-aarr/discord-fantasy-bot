@@ -1,21 +1,24 @@
 from discord.ext import commands
-from utils.json_handler import load_db, save_db
 from utils.llm import generate_text
+import json
 
-@commands.command(name="explore")
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
 async def explore(ctx):
-    db = load_db()
-    user_id = str(ctx.author.id)
-
-    char = next((c for c in db["characters"] if c["user_id"] == user_id), None)
-    if not char:
-        await ctx.send("キャラ作ってへんで。`/create` してな。")
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    if not user:
+        await ctx.send("まず /create_character でキャラクターを作成してください。")
         return
-
-    prompt = f"{char['location']} を探索したときのイベントをゲーム風に150文字以内で返せ。"
-    event = generate_text(prompt)
-
-    char["status"]["exp"] += 10
-    save_db(db)
-
-    await ctx.send(f"🔍 探索結果：\n```\n{event}\n```\n+10 EXP")
+    prompt = f"{user['character_name']} が新しい土地を探索しました。どんな冒険が起こるか文章を生成してください。"
+    result = generate_text(prompt)
+    user["actions_taken"].append("explore")
+    save_data(data)
+    await ctx.send(result)
