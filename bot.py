@@ -34,15 +34,21 @@ async def on_ready():
     print("------")
 
 def run_web():
+    class Handler(SimpleHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type','text/plain')
+            self.end_headers()
+            self.wfile.write(b'OK')
     server_address = ('0.0.0.0', 8000)
-    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+    httpd = HTTPServer(server_address, Handler)
     httpd.serve_forever()
 
 threading.Thread(target=run_web, daemon=True).start()
 
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 if not TOKEN:
-    print("DISCORD_BOT_TOKEN not set")
+    print("DISCORD_BOT_TOKEN is not set. Exiting.")
     exit(1)
 
 bot.run(TOKEN)
