@@ -1,18 +1,21 @@
 from discord.ext import commands
-from utils.json_handler import load_db
-from utils.llm import generate_text
+import json
 
-@commands.command(name="act")
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
 async def act(ctx, *, action: str):
-    db = load_db()
-    user_id = str(ctx.author.id)
-
-    char = next((c for c in db["characters"] if c["user_id"] == user_id), None)
-    if not char:
-        await ctx.send("キャラがないで。`/create` してな。")
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    if not user:
+        await ctx.send("まず /create_character でキャラクターを作成してください。")
         return
-
-    prompt = f"{char['name']} （場所：{char['location']}）が「{action}」行動をした結果を100文字以内で書け。"
-    result = generate_text(prompt)
-
-    await ctx.send(f"🎭 行動結果：\n```\n{result}\n```")
+    user["actions_taken"].append(action)
+    save_data(data)
+    await ctx.send(f"{user['character_name']} は {action} を行いました。")
