@@ -1,9 +1,40 @@
-from discord.ext import commands
+from discord.ext import commands, tasks
+import json
 from utils.llm import generate_text
+import random
+import asyncio
 
-@commands.command(name="event")
-async def event(ctx):
-    prompt = "ファンタジー世界で発生する突発イベントを120文字以内で1つ生成せよ。"
-    text = generate_text(prompt)
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    await ctx.send(f"🎇 ランダムイベント！\n```\n{text}\n```")
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@tasks.loop(minutes=30)
+async def random_event(bot):
+    data = load_data()
+    for user_id, user in data["users"].items():
+        event_type = random.choice(["暴徒反乱", "革命", "疫病", "自然災害", "平和な日常"])
+        severity = random.choice(["軽微", "中程度", "重大"])
+        prompt = f"{user['country_name']} で {event_type} が発生しました。影響は {severity}。詳細文章を生成してください。"
+        message = generate_text(prompt)
+
+        if "events" not in user:
+            user["events"] = []
+        user["events"].append({"event_type": event_type, "severity": severity, "message": message})
+        user["custom_flags"][f"event_{len(user['events'])}"] = {"type": event_type, "severity": severity}
+
+        channel = bot.get_channel(user.get("channel_id")) 
+        if channel:
+            await channel.send(f"国内イベント発生: {message}")
+
+    save_data(data)
+
+@commands.command()
+async def startevents(ctx):
+    bot = ctx.bot
+    if not random_event.is_running():
+        random_event.start(bot)
+    await ctx.send("国内ランダムイベントの監視を開始しました。30分ごとに発生します。")
