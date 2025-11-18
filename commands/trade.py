@@ -1,23 +1,25 @@
 from discord.ext import commands
 from utils.json_handler import load_db, save_db
+from utils.llm import generate_text
 
-@commands.command()
-async def trade(ctx, target_user: commands.MemberConverter, resource: str, amount: int):
+@commands.command(name="trade")
+async def trade(ctx, *, item: str = None):
+    if not item:
+        await ctx.send("何を取引する？ `/trade ポーション`")
+        return
+
     db = load_db()
-    user_char = None
-    target_char = None
-    for c in db["characters"]:
-        if c["user_id"] == str(ctx.author.id):
-            user_char = c
-        if c["user_id"] == str(target_user.id):
-            target_char = c
-    if not user_char or not target_char:
-        await ctx.send("どちらかのキャラクターが存在しません。")
+    user_id = str(ctx.author.id)
+    char = next((c for c in db["characters"] if c["user_id"] == user_id), None)
+
+    if not char:
+        await ctx.send("キャラがないで。`/create` してな。")
         return
-    if user_char["resources"].get(resource,0) < amount:
-        await ctx.send("資源が不足しています。")
-        return
-    user_char["resources"][resource] -= amount
-    target_char["resources"][resource] = target_char["resources"].get(resource,0) + amount
+
+    prompt = f"{char['name']} が {item} を取引した結果を100文字以内で返せ。"
+    result = generate_text(prompt)
+
+    char["status"]["exp"] += 5
     save_db(db)
-    await ctx.send(f"{user_char['name']} は {target_char['name']} に {amount} の {resource} を交易しました。")
+
+    await ctx.send(f"💱 取引結果：\n```\n{result}\n```")
