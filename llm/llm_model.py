@@ -1,10 +1,16 @@
-import random
+import os
+import requests
+
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 
 def generate_text(prompt: str) -> str:
-    templates = [
-        f"{prompt} 冒険は成功し、新しい発見がありました！",
-        f"{prompt} 想定外の困難に直面しましたが、勇気で乗り越えました。",
-        f"{prompt} 何も起こらず平穏な探索でした。",
-        f"{prompt} 新しいキャラクターや敵と遭遇しました！"
-    ]
-    return random.choice(templates)
+    if not DEEPSEEK_API_KEY:
+        return f"[DeepSeek APIキー未設定] {prompt}"
+    response = requests.post(
+        "https://api.deepseek.ai/v1/generate",
+        headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+        json={"prompt": prompt, "max_tokens": 150}
+    )
+    if response.status_code == 200:
+        return response.json().get("text", "")
+    return f"[生成失敗] {prompt}"
