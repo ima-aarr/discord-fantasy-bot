@@ -1,25 +1,32 @@
 from discord.ext import commands
-from utils.json_handler import load_db, save_db
+import json
 from utils.llm import generate_text
+import random
 
-@commands.command(name="develop")
-async def develop(ctx, *, thing: str = None):
-    if not thing:
-        await ctx.send("/develop 何を開発？")
+def load_data():
+    with open("db/db.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open("db/db.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@commands.command()
+async def develop(ctx, policy: str):
+    data = load_data()
+    user = data["users"].get(str(ctx.author.id))
+    if not user:
+        await ctx.send("まず /create_character でキャラクターを作成してください。")
         return
 
-    db = load_db()
-    user_id = str(ctx.author.id)
-    char = next((c for c in db["characters"] if c["user_id"] == user_id), None)
+    effect = random.choice(["好評", "不評", "予期せぬ混乱"])
+    prompt = f"{user['country_name']} が政策 '{policy}' を実施しました。結果: {effect}。詳細文章を生成してください。"
+    message = generate_text(prompt)
 
-    if not char:
-        await ctx.send("キャラがないで。`/create` してな。")
-        return
+    user["custom_flags"][policy] = effect
+    user["actions_taken"].append(f"develop {policy}")
+    user["events"] = user.get("events", [])
+    user["events"].append({"policy": policy, "effect": effect, "message": message})
 
-    prompt = f"{char['name']} が {thing} を開発した結果を120文字以内で書け。"
-    res = generate_text(prompt)
-
-    char["status"]["exp"] += 15
-    save_db(db)
-
-    await ctx.send(f"🛠️ 開発結果：\n```\n{res}\n```")
+    save_data(data)
+    await ctx.send(message)
