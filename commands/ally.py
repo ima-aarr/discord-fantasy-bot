@@ -1,31 +1,21 @@
 from discord.ext import commands
-import json
+from utils.storage import load_data, save_data
 from utils.llm import generate_text
-
-def load_data():
-    with open("db/db.json", "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_data(data):
-    with open("db/db.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
 
 @commands.command()
 async def ally(ctx, target: commands.MemberConverter):
     data = load_data()
-    user = data["users"].get(str(ctx.author.id))
-    target_user = data["users"].get(str(target.id))
-
+    uid = str(ctx.author.id)
+    tid = str(target.id)
+    user = data.get("players", {}).get(uid)
+    target_user = data.get("players", {}).get(tid)
     if not user or not target_user:
         await ctx.send("両者とも /create_character でキャラクター作成が必要です。")
         return
-
-    prompt = f"{user['country_name']} が {target_user['country_name']} に同盟を提案しました。外交文章を生成してください。"
+    prompt = f"{user.get('country_name','国名不明')} が {target_user.get('country_name','国名不明')} に同盟を提案しました。外交文を生成してください。"
     message = generate_text(prompt)
-
-    user["alliances"].append(target.id)
-    target_user["alliances"].append(ctx.author.id)
-    user["actions_taken"].append(f"ally {target.id}")
-
+    user.setdefault("alliances", []).append(tid)
+    target_user.setdefault("alliances", []).append(uid)
+    user.setdefault("actions_taken", []).append(f"ally {tid}")
     save_data(data)
     await ctx.send(message)
