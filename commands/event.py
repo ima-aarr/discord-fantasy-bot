@@ -1,33 +1,31 @@
 from discord.ext import commands, tasks
-import json
+from utils.storage import load_data, save_data
 from utils.llm import generate_text
 import random
-import asyncio
-
-def load_data():
-    with open("db/db.json", "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_data(data):
-    with open("db/db.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+from datetime import datetime, timezone
 
 @tasks.loop(hours=24)
 async def daily_event(bot):
     data = load_data()
-    for user_id, user in data["users"].items():
+    for uid, user in data.get("players", {}).items():
         event_type = random.choice(["暴徒反乱", "革命", "疫病", "自然災害", "平和な日常"])
         severity = random.choice(["軽微", "中程度", "重大"])
-        prompt = f"{user['country_name']} で {event_type} が発生しました。影響は {severity}。詳細文章を生成してください。"
+        prompt = f"{user.get('country_name','国名不明')}で{event_type}が発生。影響: {severity}。描写を生成してください。"
         message = generate_text(prompt)
-
-        user.setdefault("events", []).append({"event_type": event_type, "severity": severity, "message": message})
-        user.setdefault("custom_flags", {})[f"event_{len(user['events'])}"] = {"type": event_type, "severity": severity}
-
-        channel = bot.get_channel(user.get("channel_id"))
-        if channel:
-            await channel.send(f"国内イベント発生: {message}")
-
+        user.setdefault("events", []).append({
+            "time": datetime.now(timezone.utc).isoformat(),
+            "event_type": event_type,
+            "severity": severity,
+            "message": message
+        })
+        channel_id = user.get("channel_id")
+        if channel_id:
+            ch = bot.get_channel(channel_id)
+            if ch:
+                try:
+                    await ch.send(f"国内イベント発生:\n{message}")
+                except:
+                    pass
     save_data(data)
 
 @commands.command()
