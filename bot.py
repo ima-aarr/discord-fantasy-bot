@@ -1,103 +1,70 @@
-import os
-import threading
-from http.server import SimpleHTTPRequestHandler, HTTPServer
 import discord
-from discord.ext import commands, tasks
-from datetime import datetime, timezone
+from discord.ext import commands
+from firebase_setup import db
+from deepseek_utils import generate_text
+import os
 
-from utils.storage import load_data, save_data, ensure_db_exists
-from commands.create_character import create_character
-from commands.move import move
-from commands.explore import explore
-from commands.act import act
-from commands.quest import quest
-from commands.party import party
-from commands.duel import duel
-from commands.talk import talk
-from commands.trade import trade
-from commands.ally import ally
-from commands.war import war
-from commands.develop import develop
-from commands.event import startevents
+bot = commands.Bot(command_prefix="/")
 
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix='/', intents=intents)
+# --- キャラクター作成 ---
+@bot.command()
+async def create_character(ctx, *, description):
+    result = generate_text(f"キャラクター作成: {description}")
+    db.reference(f"players/{ctx.author.id}").set(result)
+    await ctx.send(f"{ctx.author.name} のキャラクターを作成しました！")
 
-bot.add_command(create_character)
-bot.add_command(move)
-bot.add_command(explore)
-bot.add_command(act)
-bot.add_command(quest)
-bot.add_command(party)
-bot.add_command(duel)
-bot.add_command(talk)
-bot.add_command(trade)
-bot.add_command(ally)
-bot.add_command(war)
-bot.add_command(develop)
-bot.add_command(startevents)
+# --- 移動 ---
+@bot.command()
+async def move(ctx, direction):
+    ref = db.reference(f"players/{ctx.author.id}")
+    player = ref.get() or {"x":0,"y":0}
+    if direction=="北": player["y"]+=1
+    if direction=="南": player["y"]-=1
+    if direction=="東": player["x"]+=1
+    if direction=="西": player["x"]-=1
+    ref.set(player)
+    await ctx.send(f"{ctx.author.name} は {direction} に移動しました！")
 
-DATA_SAVE_INTERVAL_SECONDS = 60 * 5
+# --- 探索 ---
+@bot.command()
+async def explore(ctx):
+    player = db.reference(f"players/{ctx.author.id}").get() or {"x":0,"y":0}
+    event = generate_text(f"探索: プレイヤー{ctx.author.name}が座標({player['x']},{player['y']})で探索")
+    await ctx.send(event)
 
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user} (id: {bot.user.id})")
-    print("------")
-    if not daily_event.is_running():
-        daily_event.start()
-    if not autosave.is_running():
-        autosave.start()
+# --- 自由行動 ---
+@bot.command()
+async def act(ctx, *, action):
+    player = db.reference(f"players/{ctx.author.id}").get() or {}
+    result = generate_text(f"自由行動: {action} プレイヤー情報: {player}")
+    await ctx.send(result)
 
-@tasks.loop(hours=24)
-async def daily_event():
-    data = load_data()
-    for uid, user in data.get("players", {}).items():
-        from utils.llm import generate_text
-        import random
-        event_type = random.choice(["暴徒反乱", "革命", "疫病", "自然災害", "平和な日常"])
-        severity = random.choice(["軽微", "中程度", "重大"])
-        prompt = f"{user.get('country_name','未知の国')} で {event_type} が発生。影響: {severity}。状況説明をゲーム世界観で書いてください。"
-        message = generate_text(prompt)
-        user.setdefault("events", []).append({
-            "time": datetime.now(timezone.utc).isoformat(),
-            "type": event_type,
-            "severity": severity,
-            "message": message
-        })
-        # notify stored channel if exists
-        channel_id = user.get("channel_id")
-        if channel_id:
-            ch = bot.get_channel(channel_id)
-            if ch:
-                try:
-                    await ch.send(f"国内イベント発生:\n{message}")
-                except:
-                    pass
-    save_data(data)
+# --- クエスト ---
+@bot.command()
+async def quest(ctx, *, quest_text):
+    player = db.reference(f"players/{ctx.author.id}").get() or {}
+    result = generate_text(f"クエスト挑戦: {quest_text} プレイヤー情報: {player}")
+    await ctx.send(result)
 
-@tasks.loop(seconds=DATA_SAVE_INTERVAL_SECONDS)
-async def autosave():
-    # minimal autosave to push local changes (commands write directly via save_data)
-    data = load_data()
-    save_data(data)
+# --- パーティ ---
+@bot.command()
+async def party(ctx, member: discord.Member):
+    await ctx.send(f"{ctx.author.name} と {member.name} がクエストパーティを組みました！")
 
-def run_web():
-    class Handler(SimpleHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.send_header('Content-type','text/plain')
-            self.end_headers()
-            self.wfile.write(b'OK')
-    server_address = ('0.0.0.0', 8000)
-    httpd = HTTPServer(server_address, Handler)
-    httpd.serve_forever()
+# --- デュエル ---
+@bot.command()
+async def duel(ctx, member: discord.Member):
+    await ctx.send(f"{ctx.author.name} が {member.name} とデュエルを開始！")
 
-if __name__ == "__main__":
-    ensure_db_exists()
-    threading.Thread(target=run_web, daemon=True).start()
-    TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
-    if not TOKEN:
-        print("DISCORD_BOT_TOKEN is not set. Exiting.")
-        exit(1)
-    bot.run(TOKEN)
+# --- 会話 ---
+@bot.command()
+async def talk(ctx, member: discord.Member, *, text):
+    result = generate_text(f"会話: {ctx.author.name} -> {member.name}: {text}")
+    await ctx.send(result)
+
+# --- 交易 ---
+@bot.command()
+async def trade(ctx, member: discord.Member, *, item):
+    await ctx.send(f"{ctx.author.name} は {member.name} に {item} を交易しました！")
+
+bot.run(os.environ["DISCORD_BOT_TOKEN"])
