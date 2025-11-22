@@ -1,14 +1,20 @@
 from discord.ext import commands
-from utils.storage import load_data, save_data
-
-@commands.command()
-async def move(ctx, x: int, y: int):
-    data = load_data()
-    user = data.get("players", {}).get(str(ctx.author.id))
-    if not user:
-        await ctx.send("まず /create_character でキャラクターを作成してください。")
-        return
-    user.setdefault("custom_flags", {})["position"] = {"x": int(x), "y": int(y)}
-    user.setdefault("actions_taken", []).append(f"move to ({x},{y})")
-    save_data(data)
-    await ctx.send(f"{user.get('character_name','匿名')} は ({x},{y}) に移動しました。")
+from utils.storage import get_user, update_user
+@commands.command(name="move")
+async def move(ctx, direction: str):
+    uid = str(ctx.author.id)
+    user = get_user(uid) or {"pos":{"x":0,"y":0}}
+    x = user["pos"].get("x",0)
+    y = user["pos"].get("y",0)
+    d = direction.lower()
+    if d in ("north","n","上","北"):
+        y += 1
+    elif d in ("south","s","下","南"):
+        y -= 1
+    elif d in ("east","e","右","東"):
+        x += 1
+    elif d in ("west","w","左","西"):
+        x -= 1
+    user["pos"] = {"x":x,"y":y}
+    update_user(uid, {"pos":user["pos"]})
+    await ctx.send(f"{ctx.author.mention} 移動したで。現在の座標: ({x},{y})")
