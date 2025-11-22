@@ -1,0 +1,5 @@
+import os
+
+DEESEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+FIREBASE_URL = os.getenv("FIREBASE_URL")
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
