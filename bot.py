@@ -1,42 +1,22 @@
-import os
 import discord
 from discord.ext import commands
-from firebase_setup import db
-from utils.deepseek import deepseek_generate
-from commands.create_character import create_character
-from commands.move import move
-from commands.explore import explore
-from commands.act import act
-from commands.quest import quest
-from commands.party import party
-from commands.duel import duel
-from commands.talk import talk
-from commands.trade import trade
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix='/', intents=intents)
-bot.add_command(create_character)
-bot.add_command(move)
-bot.add_command(explore)
-bot.add_command(act)
-bot.add_command(quest)
-bot.add_command(party)
-bot.add_command(duel)
-bot.add_command(talk)
-bot.add_command(trade)
+
+from commands.start import setup_start_cmd
+from commands.act import setup_act_cmd
+
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix="/", intents=intents)
+
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user} (id: {bot.user.id})")
-TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
-if not TOKEN:
-    print("DISCORD_BOT_TOKEN not set")
-    exit(1)
-import threading
-from http.server import SimpleHTTPRequestHandler, HTTPServer
-def run_web():
-    port = int(os.environ.get("PORT", "8000"))
-    server_address = ("0.0.0.0", port)
-    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
-    httpd.serve_forever()
-threading.Thread(target=run_web, daemon=True).start()
-bot.run(TOKEN)
+    print(f"Logged in as {bot.user}")
+
+# コマンド登録
+async def setup():
+    await setup_start_cmd(bot)
+    await setup_act_cmd(bot)
+
+    await bot.start(os.getenv("DISCORD_TOKEN"))
+
+import asyncio
+asyncio.run(setup())
