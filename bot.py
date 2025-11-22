@@ -3,22 +3,18 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from commands.start import setup_start_cmd
-from commands.act import setup_act_cmd
+intents = discord.Intents.default()
+intents.message_content = True
 
-intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user}")
-
-# コマンド登録
 async def setup():
-    await setup_start_cmd(bot)
-    await setup_act_cmd(bot)
+    print("Loading commands...")
+
+    # デバッグ印（これで値が入っているか確認）
+    print("DEBUG TOKEN:", os.getenv("DISCORD_TOKEN"))
 
     await bot.start(os.getenv("DISCORD_TOKEN"))
 
-import asyncio
-asyncio.run(setup())
+if __name__ == "__main__":
+    asyncio.run(setup())
