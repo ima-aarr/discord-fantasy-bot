@@ -1,0 +1,11 @@
+name: fantasy-bot
+services:
+  bot:
+    dockerfile: ./Dockerfile
+    env:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      LLM_PROXY_URL: ${LLM_PROXY_URL}
+      TZ: "Asia/Tokyo"
+    auto_deploy: true
+    ports:
+      - internal_port: 8080
