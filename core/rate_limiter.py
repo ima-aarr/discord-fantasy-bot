@@ -1,24 +1,27 @@
-# core/rate_limiter.py
+# core/rate_limit.py
 import time
 from core import db
 
-def check_and_bump_user(user_id: str, window: int = 60, limit: int = 10):
-    """
-    Very simple: store counts under /rate_limits/users/{user_id}/{minute_bucket}
-    """
-    bucket = str(int(time.time() // window))
-    path = f"rate_limits/users/{user_id}/{bucket}"
-    cur = db.get(path) or 0
-    if cur >= limit:
-        return False
-    db.put(path, cur + 1)
-    return True
+WINDOW = 10     # 10 秒
+LIMIT = 8       # 8 回まで
 
-def check_global(window: int = 60, limit: int = 100):
-    bucket = str(int(time.time() // window))
-    path = f"rate_limits/global/{bucket}"
-    cur = db.get(path) or 0
-    if cur >= limit:
+def check(user_id: str) -> bool:
+    """True = 許可、False = 超過"""
+    path = f"rate/{user_id}"
+    record = db.get(path)
+    now = time.time()
+
+    if not record:
+        db.put(path, {"count": 1, "reset": now + WINDOW})
+        return True
+
+    if now > record.get("reset", 0):
+        db.put(path, {"count": 1, "reset": now + WINDOW})
+        return True
+
+    if record["count"] >= LIMIT:
         return False
-    db.put(path, cur + 1)
+
+    record["count"] += 1
+    db.put(path, record)
     return True
